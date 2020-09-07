@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.smallproject.gmf</groupId>
-	<artifactId>spring-cloud-monitoring-service</artifactId>
+	<artifactId>monitoring-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>monitoring-service</name>
 	<description>Demo project for Spring Boot</description>

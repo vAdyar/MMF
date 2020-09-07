@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.smallproject.gmf</groupId>
-    <artifactId>spring-cloud-restaurant-service</artifactId>
+    <artifactId>restaurant-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>restaurant-service</name>
     <description>Restaurant service</description>
@@ -93,7 +93,7 @@
                         <image>openjdk:alpine</image>
                     </from>
                     <to>
-                        <image>spring-cloud-restaurant-service:${project.version}</image>
+                        <image>restaurant-service:${project.version}</image>
                     </to>
                 </configuration>
             </plugin>

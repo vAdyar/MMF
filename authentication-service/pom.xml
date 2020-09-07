@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.smallproject.gmf</groupId>
-	<artifactId>spring-cloud-authentication-service</artifactId>
+	<artifactId>authentication-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>authentication-service</name>
 	<description>Authentication service</description>
