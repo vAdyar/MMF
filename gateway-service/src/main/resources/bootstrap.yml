@@ -1,0 +1,8 @@
+spring:
+  cloud:
+    config:
+#      Picks up config from port 8888 in local env
+#      uri: http://localhost:8888
+      fail-fast: true
+      password: 12345
+      username: user
