@@ -1,0 +1,31 @@
+spring:
+  cloud:
+    config:
+#      Picks up config from port 8888 in local env
+#      uri: http://localhost:8888
+      fail-fast: true
+      password: 12345
+      username: user
+  application:
+    name: user-service
+
+security:
+  oauth2:
+    client:
+      clientId: account-service
+      clientSecret: password
+      accessTokenUri: http://localhost:8082/uaa/oauth/token
+      grant-type: client_credentials
+      scope: server
+    resource:
+      user-info-uri: http://localhost:8081/uaa/users/current
+
+
+server:
+  servlet:
+    context-path: /users
+  port: 8083
+
+feign:
+  hystrix:
+    enabled: true

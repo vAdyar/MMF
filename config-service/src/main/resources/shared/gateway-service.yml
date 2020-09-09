@@ -1,3 +1,6 @@
+server:
+  port: 8081
+
 zuul:
   ignoredServices: '*'
   host:
@@ -6,7 +9,7 @@ zuul:
 
   routes:
     auth-service:
-      path: /auth/**
+      path: /uaa/**
       serviceId: auth-service
       stripPrefix: false
       sensitiveHeaders:

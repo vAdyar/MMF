@@ -1,8 +1,42 @@
-spring:
-  cloud:
-    config:
-#      Picks up config from port 8888 in local env
+#spring:
+#  cloud:
+#    config:
 #      uri: http://localhost:8888
-      fail-fast: true
-      password: 12345
-      username: user
+#      fail-fast: true
+#      password: 12345
+#      username: user
+#  application:
+#    name: gateway-service
+
+server:
+  port: 8081
+
+zuul:
+  ignoredServices: '*'
+  host:
+    connect-timeout-millis: 20000
+    socket-timeout-millis: 20000
+  routes:
+    auth-service:
+      path: /uaa/**
+#      serverId: auth-service
+      url: http://localhost:8082/
+      stripPrefix: false
+      sensitiveHeaders:
+    user-service:
+      path: /users/**
+#      serviceId: user-service
+      url: http://localhost:8083/
+      stripPrefix: false
+      sensitiveHeaders:
+spring:
+  application:
+    name: gateway-service
+
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 60000

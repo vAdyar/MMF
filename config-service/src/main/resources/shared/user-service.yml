@@ -1,0 +1,17 @@
+security:
+  oauth2:
+    client:
+      clientId: account-service
+      clientSecret: password
+      accessTokenUri: http://auth-service:8082/auth/oauth/token
+      grant-type: client_credentials
+      scope: server
+
+server:
+  servlet:
+    context-path: /users
+  port: 8083
+
+feign:
+  hystrix:
+    enabled: true
