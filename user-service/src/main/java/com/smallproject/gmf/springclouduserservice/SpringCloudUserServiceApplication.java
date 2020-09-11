@@ -248,7 +248,6 @@ class CustomUserInfoTokenServices implements ResourceServerTokenServices {
 
         String clientId = (String) request.get("clientId");
         Set<String> scope = new LinkedHashSet<>();
-        System.out.println(request.get("scope").getClass());
         scope = request.containsKey("scope") ?
                 new HashSet(((LinkedHashMap<String, String>) request.get("scope")).values()) : Collections.<String>emptySet();
 

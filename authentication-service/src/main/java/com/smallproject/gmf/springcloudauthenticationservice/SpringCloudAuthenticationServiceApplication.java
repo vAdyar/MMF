@@ -15,13 +15,16 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.config.annotation.configurers.ClientDetailsServiceConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configuration.AuthorizationServerConfigurerAdapter;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
@@ -30,6 +33,8 @@ import org.springframework.security.oauth2.config.annotation.web.configurers.Aut
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
 import org.springframework.security.oauth2.provider.token.TokenStore;
 import org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore;
+import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
+import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -46,6 +51,7 @@ import java.util.Optional;
 
 @SpringBootApplication
 @EnableResourceServer
+@EnableAuthorizationServer
 @EnableDiscoveryClient
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SpringCloudAuthenticationServiceApplication {
@@ -54,98 +60,6 @@ public class SpringCloudAuthenticationServiceApplication {
         SpringApplication.run(SpringCloudAuthenticationServiceApplication.class, args);
     }
 
-}
-
-@Configuration
-@EnableAuthorizationServer
-class OAuth2AuthorizationConfig extends AuthorizationServerConfigurerAdapter {
-
-    private TokenStore tokenStore = new InMemoryTokenStore();
-    private final String NOOP_PASSWORD_ENCODE = "{noop}";
-
-    @Autowired
-    @Qualifier("authenticationManagerBean")
-    private AuthenticationManager authenticationManager;
-
-    @Autowired
-    private OAuthUserDetailsServiceImpl userDetailsService;
-
-    @Autowired
-    private Environment env;
-
-    @Override
-    public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
-
-        // TODO persist clients details
-
-        // @formatter:off
-        clients.inMemory()
-                .withClient("browser")
-                .authorizedGrantTypes("refresh_token", "password")
-                .scopes("ui")
-                .and()
-                .withClient("account-service")
-                .secret("password")
-                .authorizedGrantTypes("client_credentials", "refresh_token", "password")
-                .scopes("server")
-                .and()
-                .withClient("statistics-service")
-                .secret(env.getProperty("STATISTICS_SERVICE_PASSWORD"))
-                .authorizedGrantTypes("client_credentials", "refresh_token")
-                .scopes("server")
-                .and()
-                .withClient("notification-service")
-                .secret(env.getProperty("NOTIFICATION_SERVICE_PASSWORD"))
-                .authorizedGrantTypes("client_credentials", "refresh_token")
-                .scopes("server");
-        // @formatter:on
-    }
-
-    @Override
-    public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
-        endpoints
-                .tokenStore(tokenStore)
-                .authenticationManager(authenticationManager)
-                .userDetailsService(userDetailsService);
-    }
-
-    @Override
-    public void configure(AuthorizationServerSecurityConfigurer oauthServer) throws Exception {
-        oauthServer
-                .tokenKeyAccess("permitAll()")
-                .checkTokenAccess("isAuthenticated()")
-                .passwordEncoder(NoOpPasswordEncoder.getInstance());
-    }
-
-}
-
-@Configuration
-class WebSecurityConfig extends WebSecurityConfigurerAdapter {
-
-    @Autowired
-    private OAuthUserDetailsServiceImpl userDetailsService;
-
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        // @formatter:off
-        http
-                .authorizeRequests().anyRequest().authenticated()
-                .and()
-                .csrf().disable();
-        // @formatter:on
-    }
-
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userDetailsService)
-                .passwordEncoder(new BCryptPasswordEncoder());
-    }
-
-    @Override
-    @Bean
-    public AuthenticationManager authenticationManagerBean() throws Exception {
-        return super.authenticationManagerBean();
-    }
 }
 
 @RestController
@@ -168,6 +82,101 @@ class UserController {
         userService.create(user);
     }
 }
+
+@Configuration
+class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
+
+    @Autowired
+    private OAuthUserDetailsServiceImpl oAuthUserDetailsService;
+
+    @Bean
+    public PasswordEncoder encoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests().anyRequest().authenticated()
+                .and().sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.NEVER);
+    }
+
+    @Override
+    @Autowired
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(oAuthUserDetailsService).passwordEncoder(encoder());
+    }
+
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        web.ignoring();
+    }
+
+    @Override
+    @Bean
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+
+}
+
+@Configuration
+class OAuth2Config extends AuthorizationServerConfigurerAdapter {
+
+    @Autowired
+    @Qualifier("authenticationManagerBean")
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    PasswordEncoder passwordEncoder;
+
+    @Bean
+    public JwtAccessTokenConverter tokenConverter() {
+        JwtAccessTokenConverter converter = new JwtAccessTokenConverter();
+        converter.setSigningKey("12345");
+        return converter;
+    }
+    @Bean
+    public JwtTokenStore tokenStore() {
+        return new JwtTokenStore(tokenConverter());
+    }
+    @Override
+    public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
+        endpoints
+                .authenticationManager(authenticationManager)
+                .tokenStore(tokenStore())
+                .accessTokenConverter(tokenConverter());
+    }
+    @Override
+    public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
+        security
+                .tokenKeyAccess("permitAll()")
+                .checkTokenAccess("isAuthenticated()");
+    }
+    @Override
+    public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
+        // @formatter:off
+        clients.inMemory()
+                .withClient("browser")
+                .secret(passwordEncoder.encode(""))
+                .authorizedGrantTypes("refresh_token", "password", "authorization_code", "implicit")
+                .scopes("ui", "read", "write", "trust")
+                .accessTokenValiditySeconds(20000)
+                .refreshTokenValiditySeconds(20000)
+                .and()
+                .withClient("account-service")
+                .secret(passwordEncoder.encode("password"))
+                .authorizedGrantTypes("client_credentials", "refresh_token", "password")
+                .scopes("server")
+                .accessTokenValiditySeconds(20000)
+                .refreshTokenValiditySeconds(20000);
+        // @formatter:on
+
+
+    }
+}
+
 
 @Entity(name = "users")
 class User implements UserDetails {
